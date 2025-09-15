@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>AR.js GPS Example</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+    <style>
+        .arjs-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="arjs-loader">
+        <div>Loading, please wait...</div>
+    </div>
+
+    <a-scene
+        vr-mode-ui="enabled: false"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false;"
+        renderer="logarithmicDepthBuffer: true;">
+
+        <a-entity gps-camera rotation-reader></a-entity>
+
+        <!-- Kita akan menambahkan entitas lokasi di sini melalui JavaScript -->
+    </a-scene>
+
+    <script>
+        // Fungsi haversine untuk menghitung jarak antara dua koordinat
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius bumi dalam km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c * 1000; // Jarak dalam meter
+            return distance;
+        }
+
+        // Mendefinisikan komponen distance-check
+        AFRAME.registerComponent('distance-check', {
+            schema: {
+                latitude: { type: 'number' },
+                longitude: { type: 'number' },
+                maxDistance: { type: 'number', default: 10 }
+            },
+            init: function () {
+                this.el.setAttribute('visible', false);
+                this.currentPosition = { latitude: 0, longitude: 0 };
+                const camera = document.querySelector('[gps-camera]');
+                if (camera) {
+                    this.camera = camera;
+                    this.onGpsUpdate = this.onGpsUpdate.bind(this);
+                    this.camera.addEventListener('gps-camera-update', this.onGpsUpdate);
+                }
+            },
+            onGpsUpdate: function (e) {
+                this.currentPosition = e.detail.position;
+            },
+            tick: function () {
+                const distance = haversine(
+                    this.currentPosition.longitude, this.currentPosition.latitude, 
+                    this.data.longitude, this.data.latitude
+                );
+
+                if (distance <= this.data.maxDistance) {
+                    this.el.setAttribute('visible', true);
+                } else {
+                    this.el.setAttribute('visible', false);
+                }
+            },
+            remove: function () {
+                if (this.camera) {
+                    this.camera.removeEventListener('gps-camera-update', this.onGpsUpdate);
+                }
+            }
+        });
+
+        // Data lokasi
+        const locations = [
+            {"item":"3275","latitude":-7.7551217,"longitude":112.7516147,"timestamp":1757747769012},
+            {"item":"3240","latitude":-7.7551242,"longitude":112.7518157,"timestamp":1757747826012},
+            {"item":"3120","latitude":-7.7551035,"longitude":112.7518185,"timestamp":1757903007028}
+        ];
+
+        // Setelah scene dimuat, sembunyikan loader dan tambahkan entitas
+        document.querySelector('a-scene').addEventListener('loaded', function() {
+            // Sembunyikan loader
+            document.querySelector('.arjs-loader').style.display = 'none';
+
+            const scene = document.querySelector('a-scene');
+
+            locations.forEach(e => {
+                const entity = document.createElement('a-entity');
+                entity.setAttribute('gps-entity-place', `latitude: ${e.latitude}; longitude: ${e.longitude}`);
+                entity.setAttribute('distance-check', `latitude: ${e.latitude}; longitude: ${e.longitude}; maxDistance: 10`);
+
+                const plane = document.createElement('a-plane');
+                plane.setAttribute('src', 'logo.png');
+                plane.setAttribute('width', '0.1');
+                plane.setAttribute('height', '0.1');
+                plane.setAttribute('position', '0 1.6 -2');
+                plane.setAttribute('rotation', '0 0 0');
+                plane.setAttribute('scale', '10 10 10');
+                plane.setAttribute('material', 'side: double; transparent: true; alphaTest: 0.5;');
+                plane.setAttribute('animation', 'property: rotation; to: 0 360 0; loop: true; dur: 8000; easing: linear');
+
+                entity.appendChild(plane);
+                scene.appendChild(entity);
+            });
+        });
+    </script>
+</body>
+</html>
