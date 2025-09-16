@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR GPS dengan Kontrol Kamera yang Lebih Baik</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: white;
+        }
+        .arjs-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #333;
+            border-top: 5px solid #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 15px;
+            box-sizing: border-box;
+            border-top: 1px solid #4CAF50;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        button:hover {
+            background: #1b5e20;
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .location-info {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        .distance-bar {
+            height: 5px;
+            background: #333;
+            border-radius: 3px;
+            margin: 5px 0;
+            overflow: hidden;
+        }
+        .distance-progress {
+            height: 100%;
+            background: #4CAF50;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="arjs-loader">
+        <div class="loading-spinner"></div>
+        <h3>Menginisialisasi AR</h3>
+        <p>Mohon tunggu, sedang memuat lingkungan AR...</p>
+    </div>
+
+    <div class="instructions">
+        <p>Gerakkan perangkat Anda secara perlahan untuk memindai lingkungan</p>
+    </div>
+
+    <a-scene
+        vr-mode-ui="enabled: false"
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false; 
+               detectionMode: mono; matrixCodeType: 3x3;"
+        renderer="logarithmicDepthBuffer: true; precision: medium;">
+
+        <!-- Camera dengan pengaturan yang lebih baik -->
+        <a-entity id="rig" gps-camera rotation-reader>
+            <a-entity camera="fov: 70; far: 1000;" position="0 0 0"></a-entity>
+        </a-entity>
+
+        <!-- Lighting yang lebih baik untuk lingkungan AR -->
+        <a-entity light="type: ambient; color: #CCC; intensity: 0.7"></a-entity>
+        <a-entity light="type: directional; color: #FFF; intensity: 0.5; position: 1 1 1"></a-entity>
+
+        <!-- Entity untuk lokasi akan ditambahkan secara dinamis -->
+    </a-scene>
+
+    <div class="info-panel">
+        <h3>AR GPS Explorer</h3>
+        <p>Temukan lokasi tersembunyi di sekitar Anda</p>
+        <div class="controls">
+            <button onclick="adjustZoom(5)">Zoom +</button>
+            <button onclick="adjustZoom(-5)">Zoom -</button>
+            <button onclick="resetView()">Reset View</button>
+        </div>
+        <div id="status">Mendeteksi permukaan...</div>
+        <div id="locations"></div>
+    </div>
+
+    <script>
+        // Data lokasi
+        const locations = [
+            {"item":"3275","latitude":-7.7551217,"longitude":112.7516147,"timestamp":1757747769012},
+            {"item":"3240","latitude":-7.7551242,"longitude":112.7518157,"timestamp":1757747826012},
+            {"item":"3120","latitude":-7.7551035,"longitude":112.7518185,"timestamp":1757903007028}
+        ];
+
+        // Variabel global
+        let userLocation = null;
+        let currentZoom = 70; // Default FOV
+        const scene = document.querySelector('a-scene');
+        const statusElement = document.getElementById('status');
+        const locationsElement = document.getElementById('locations');
+        const camera = document.querySelector('[camera]');
+
+        // Fungsi untuk menyesuaikan zoom
+        function adjustZoom(value) {
+            currentZoom = Math.max(30, Math.min(100, currentZoom + value));
+            camera.setAttribute('camera', 'fov', currentZoom);
+            statusElement.textContent = `Zoom: ${Math.round((100 - currentZoom) + 30)}%`;
+            
+            // Reset status setelah 2 detik
+            setTimeout(updateLocationStatus, 2000);
+        }
+
+        // Fungsi untuk reset view
+        function resetView() {
+            currentZoom = 70;
+            camera.setAttribute('camera', 'fov', currentZoom);
+            statusElement.textContent = "View direset";
+            setTimeout(updateLocationStatus, 2000);
+        }
+
+        // Fungsi untuk menghitung jarak antara dua koordinat GPS (dalam meter)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // Earth radius in meters
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            return R * c;
+        }
+
+        // Fungsi untuk memperbarui UI dengan status lokasi
+        function updateLocationStatus() {
+            if (!userLocation) return;
+            
+            locationsElement.innerHTML = '';
+            
+            locations.forEach(loc => {
+                const distance = calculateDistance(
+                    userLocation.latitude, 
+                    userLocation.longitude,
+                    loc.latitude,
+                    loc.longitude
+                );
+                
+                const distancePercent = Math.min(100, Math.max(0, 100 - (distance / 10) * 100));
+                
+                const locElement = document.createElement('div');
+                locElement.className = 'location-info';
+                locElement.innerHTML = `
+                    <strong>Lokasi ${loc.item}</strong>
+                    <div class="distance-bar">
+                        <div class="distance-progress" style="width: ${distancePercent}%"></div>
+                    </div>
+                    <div>${distance.toFixed(1)} meter ${distance <= 10 ? '<span style="color:#4CAF50">(Dekat)</span>' : ''}</div>
+                `;
+                
+                locationsElement.appendChild(locElement);
+            });
+            
+            statusElement.textContent = `Posisi Anda: ${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}`;
+        }
+
+        // Fungsi untuk membuat entity AR
+        function createLocationEntity(loc) {
+            const entity = document.createElement('a-entity');
+            entity.setAttribute('gps-entity-place', {
+                latitude: loc.latitude,
+                longitude: loc.longitude
+            });
+            
+            // Tambahkan marker visual
+            const marker = document.createElement('a-entity');
+            marker.setAttribute('geometry', {
+                primitive: 'cylinder',
+                radius: 0.2,
+                height: 0.05
+            });
+            marker.setAttribute('material', {
+                color: '#FF5722',
+                shader: 'flat'
+            });
+            marker.setAttribute('position', '0 0 0');
+            marker.setAttribute('visible', 'false');
+            marker.setAttribute('class', 'location-marker');
+            
+            // Tambahkan teks
+            const text = document.createElement('a-entity');
+            text.setAttribute('text', {
+                value: `Lokasi ${loc.item}`,
+                align: 'center',
+                color: 'white',
+                width: 1.5
+            });
+            text.setAttribute('position', '0 0.5 0');
+            text.setAttribute('visible', 'false');
+            text.setAttribute('class', 'location-text');
+            
+            // Tambahkan logo berputar
+            const plane = document.createElement('a-plane');
+            plane.setAttribute('src', 'https://cdn-icons-png.flaticon.com/512/732/732212.png');
+            plane.setAttribute('width', 0.5);
+            plane.setAttribute('height', 0.5);
+            plane.setAttribute('position', '0 1 0');
+            plane.setAttribute('rotation', '-90 0 0');
+            plane.setAttribute('material', {
+                side: 'double',
+                transparent: true,
+                alphaTest: 0.5
+            });
+            plane.setAttribute('animation', {
+                property: 'rotation',
+                to: '270 360 0',
+                loop: true,
+                dur: 8000,
+                easing: 'linear'
+            });
+            plane.setAttribute('visible', 'false');
+            plane.setAttribute('class', 'location-logo');
+            
+            entity.appendChild(marker);
+            entity.appendChild(text);
+            entity.appendChild(plane);
+            entity.setAttribute('data-item', loc.item);
+            
+            return entity;
+        }
+
+        // Fungsi untuk memperbarui visibilitas entity berdasarkan jarak
+        function updateEntityVisibility() {
+            if (!userLocation) return;
+            
+            const entities = scene.querySelectorAll('[gps-entity-place]');
+            
+            entities.forEach(entity => {
+                const lat = parseFloat(entity.getAttribute('gps-entity-place').latitude);
+                const lon = parseFloat(entity.getAttribute('gps-entity-place').longitude);
+                
+                const distance = calculateDistance(
+                    userLocation.latitude,
+                    userLocation.longitude,
+                    lat,
+                    lon
+                );
+                
+                const marker = entity.querySelector('.location-marker');
+                const text = entity.querySelector('.location-text');
+                const logo = entity.querySelector('.location-logo');
+                
+                if (marker && text && logo) {
+                    if (distance <= 20) {
+                        marker.setAttribute('visible', distance <= 15 ? 'true' : 'false');
+                        text.setAttribute('visible', distance <= 10 ? 'true' : 'false');
+                        logo.setAttribute('visible', distance <= 10 ? 'true' : 'false');
+                        
+                        // Scale logo based on distance
+                        const scale = Math.max(0.5, Math.min(1, 1 - (distance / 20)));
+                        logo.setAttribute('scale', `${scale} ${scale} ${scale}`);
+                    } else {
+                        marker.setAttribute('visible', 'false');
+                        text.setAttribute('visible', 'false');
+                        logo.setAttribute('visible', 'false');
+                    }
+                }
+            });
+            
+            updateLocationStatus();
+        }
+
+        // Event listener saat kamera siap
+        scene.addEventListener('loaded', function() {
+            // Sembunyikan loader setelah delay
+            setTimeout(() => {
+                document.querySelector('.arjs-loader').style.display = 'none';
+                document.querySelector('.instructions').style.display = 'none';
+            }, 3000);
+            
+            // Tambahkan entity untuk setiap lokasi
+            locations.forEach(loc => {
+                const entity = createLocationEntity(loc);
+                scene.appendChild(entity);
+            });
+            
+            statusElement.textContent = "Mencari sinyal GPS...";
+        });
+
+        // Dapatkan posisi pengguna
+        if ('geolocation' in navigator) {
+            navigator.geolocation.watchPosition(
+                position => {
+                    userLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    
+                    statusElement.textContent = "GPS aktif - Memindai lokasi terdekat";
+                    updateEntityVisibility();
+                },
+                error => {
+                    console.error('Error getting location:', error);
+                    statusElement.textContent = 'Error mendapatkan lokasi: ' + error.message;
+                    
+                    // Fallback untuk development (gunakan lokasi pertama sebagai simulasi)
+                    userLocation = {
+                        latitude: locations[0].latitude,
+                        longitude: locations[0].longitude
+                    };
+                    
+                    updateEntityVisibility();
+                },
+                {
+                    enableHighAccuracy: true,
+                    maximumAge: 0,
+                    timeout: 5000
+                }
+            );
+        } else {
+            statusElement.textContent = 'Geolocation tidak didukung oleh browser Anda';
+        }
+
+        // Perbarui visibilitas secara berkala
+        setInterval(updateEntityVisibility, 2000);
+    </script>
+</body>
+</html>
