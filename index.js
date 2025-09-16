@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Data lokasi
+  alert('ok');
   const locations = [
     //{"item":"3275","latitude":-7.755300,"longitude":112.751773,"timestamp":1757747769012},
     {"item":"3275","latitude":-7.754707,"longitude":112.751103,"timestamp":1757747769012},
