@@ -167,8 +167,8 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 3000
+        maximumAge: 3000,
+        timeout: 5000
       }
     );
   } else {
