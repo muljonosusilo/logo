@@ -1,117 +1,37 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>AR.js Geolocation dengan Multiple Markers</title>
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-new-location-only.js"></script>
-
-    <script src="https://unpkg.com/aframe-look-at-component@1.0.0/dist/aframe-look-at-component.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR GPS Proximity Demo</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+    <link rel="stylesheet" href="index.css">
+    <script src="./index.js"></script>
 </head>
-<body style="margin: 0; overflow: hidden;">
-    <a-scene
-        vr-mode-ui="enabled: false"
-        arjs="sourceType: webcam; debugUIEnabled: false;">
+<body>
 
-        <a-camera gps-camera rotation-reader></a-camera>
-
-        <a-entity id="ar-objects-container"></a-entity>
+    <div class="arjs-loader">
+      <div>
+        <h3>Menginisialisasi AR GPS...</h3>
+        <div class="loading-bar">
+          <div class="loading-progress" id="loadingProgress"></div>
+        </div>
+        <p>Pastikan Anda mengizinkan akses kamera dan lokasi</p>
+      </div>
+    </div>
+    <a-scene vr-mode-ui="enabled: false" arjs="sourceType: webcam; debugUIEnabled: false;" renderer="logarithmicDepthBuffer: true;" style="position: absolute; width: 100%; height: 100%;">
+      <a-camera position="0 1.6 5"></a-camera>
+      <a-entity light="type: ambient; color: #BBB; intensity: 0.7"></a-entity>
+      <a-entity light="type: directional; color: #FFF; intensity: 0.8" position="-1 2 1"></a-entity>
     </a-scene>
+    <div class="info-panel">
+      <h3>AR GPS Proximity Demo</h3>
+      <p>Berjalanlah mendekati salah satu lokasi marker untuk melihat logo muncul</p>
+      <div id="status">Mencari sinyal GPS...</div>
+      <div id="locations"></div>
+    </div>
 
-    <script>
-        // Data lokasi Anda
-        const locations = [
-            {"item":"3275","latitude":-7.7551217,"longitude":112.7516147,"timestamp":1757747769012},
-            {"item":"3240","latitude":-7.7551242,"longitude":112.7518157,"timestamp":1757747826012},
-            {"item":"3120","latitude":-7.7551035,"longitude":112.7518185,"timestamp":1757903007028}
-        ];
-
-        // Konstanta
-        const MIN_DISTANCE_METER = 10;
-        const arObjectsContainer = document.getElementById('ar-objects-container');
-
-        // Fungsi untuk menghitung jarak Haversine antara dua titik
-        function haversineDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Radius bumi dalam meter
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            //const Δλ = (lon2 - lon2) * Math.PI / 180; // Bug di kode user: lon2 - lon1
-            const Δλ = (lon2 - lon1) * Math.PI / 180; // Perbaikan
-
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            return R * c;
-        }
-
-        // Fungsi untuk membuat elemen A-Frame
-        function createArObject(location) {
-            // Membuat a-entity utama
-            const entity = document.createElement('a-entity');
-            entity.setAttribute('gps-entity-place', {
-                latitude: location.latitude,
-                longitude: location.longitude
-            });
-
-            // Membuat a-plane anak
-            const plane = document.createElement('a-plane');
-            plane.setAttribute('src', 'logo.png');
-            plane.setAttribute('width', 0.1);
-            plane.setAttribute('height', 0.1);
-            plane.setAttribute('position', '0 1.6 0');
-            plane.setAttribute('scale', '10 10 10');
-            plane.setAttribute('material', 'side: double; transparent: true; alphaTest: 0.5;');
-            plane.setAttribute('look-at', '[gps-camera]');
-
-            // Menambahkan animasi putar
-            const animation = document.createElement('a-animation');
-            animation.setAttribute('attribute', 'rotation');
-            animation.setAttribute('to', '0 360 0');
-            animation.setAttribute('loop', 'true');
-            animation.setAttribute('dur', 8000);
-            animation.setAttribute('easing', 'linear');
-            
-            plane.appendChild(animation);
-            entity.appendChild(plane);
-            return entity;
-        }
-
-        // Memantau posisi GPS
-        window.addEventListener('load', () => {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(position => {
-                    const userLat = position.coords.latitude;
-                    const userLon = position.coords.longitude;
-
-                    locations.forEach(location => {
-                        const distance = haversineDistance(userLat, userLon, location.latitude, location.longitude);
-                        const existingObject = document.getElementById(`ar-object-${location.item}`);
-                        
-                        if (distance <= MIN_DISTANCE_METER) {
-                            // Jika objek belum ada dan jarak dekat, buat dan tambahkan
-                            if (!existingObject) {
-                                const newObject = createArObject(location);
-                                newObject.setAttribute('id', `ar-object-${location.item}`);
-                                arObjectsContainer.appendChild(newObject);
-                            }
-                        } else {
-                            // Jika objek ada dan jarak jauh, hapus
-                            if (existingObject) {
-                                existingObject.parentNode.removeChild(existingObject);
-                            }
-                        }
-                    });
-                }, error => {
-                    console.error("Error getting location: ", error);
-                    alert("Gagal mendapatkan lokasi Anda. Pastikan GPS diaktifkan.");
-                });
-            } else {
-                alert("Geolocation tidak didukung oleh browser ini.");
-            }
-        });
-
-    </script>
 </body>
 </html>
