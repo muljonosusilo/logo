@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   // Data lokasi
   const locations = [
-    {"item":"3275","latitude":-7.7551217,"longitude":112.7516147,"timestamp":1757747769012},
+    {"item":"3275","latitude":-7.755300,"longitude":112.751773,"timestamp":1757747769012},
     {"item":"3240","latitude":-7.7551242,"longitude":112.7518157,"timestamp":1757747826012},
     {"item":"3120","latitude":-7.7551035,"longitude":112.7518185,"timestamp":1757903007028}
   ];
