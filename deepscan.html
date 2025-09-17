@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengambilan Sample Koordinat yang Akurat</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <title>Pencari Posisi Akurat</title>
     <style>
         * {
             margin: 0;
@@ -13,602 +11,254 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        
         body {
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: #fff;
+            background: linear-gradient(135deg, #1a2a6c 0%, #2a5298 100%);
+            color: white;
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
         }
+        
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-        .header {
-            grid-column: 1 / -1;
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 500px;
+            padding: 25px;
             text-align: center;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
-        .card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        
+        h1 {
+            margin-bottom: 15px;
+            font-size: 24px;
         }
-        .map-container {
-            height: 400px;
+        
+        .description {
+            margin-bottom: 25px;
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+        
+        .status {
+            background-color: rgba(255, 255, 255, 0.15);
             border-radius: 10px;
-            overflow: hidden;
+            padding: 15px;
+            margin: 20px 0;
         }
-        h1, h2, h3 {
-            margin-bottom: 15px;
-            color: #4ecdc4;
+        
+        .results {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
         }
-        p {
-            margin-bottom: 15px;
-            line-height: 1.6;
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
-        .btn {
-            background: #4ecdc4;
-            color: #000;
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .value {
+            font-weight: 600;
+            color: #a8e6cf;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            color: white;
             border: none;
-            padding: 12px 20px;
-            border-radius: 30px;
+            border-radius: 8px;
+            padding: 12px 25px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            display: inline-block;
-            margin: 10px 5px;
-            font-weight: bold;
-        }
-        .btn:hover {
-            background: #ff6b6b;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-        .btn:active {
-            transform: translateY(0);
-        }
-        .btn-danger {
-            background: #ff6b6b;
-        }
-        .status {
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-            background: rgba(0, 0, 0, 0.2);
-        }
-        .coordinates {
-            font-family: monospace;
-            font-size: 16px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            border-radius: 10px;
             margin: 10px 0;
+            width: 100%;
         }
-        .samples-list {
-            max-height: 200px;
-            overflow-y: auto;
+        
+        button:hover {
+            background: linear-gradient(135deg, #0083b0 0%, #00b4db 100%);
+            transform: translateY(-2px);
+        }
+        
+        .progress {
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
             margin: 15px 0;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-        }
-        .sample-item {
-            padding: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            font-family: monospace;
-        }
-        .accuracy-indicator {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        .high {
-            background: #4CAF50;
-        }
-        .medium {
-            background: #FFC107;
-            color: #000;
-        }
-        .low {
-            background: #F44336;
-        }
-        .tips {
-            background: rgba(78, 205, 196, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 15px 0;
-        }
-        .legend {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 15px;
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            margin: 0 10px;
-        }
-        .legend-color {
-            width: 15px;
-            height: 15px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-        .progress-bar {
-            height: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 5px;
-            margin: 10px 0;
             overflow: hidden;
         }
-        .progress {
+        
+        .progress-bar {
             height: 100%;
-            background: #4ecdc4;
+            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            border-radius: 4px;
             width: 0%;
-            transition: width 0.5s ease;
+            transition: width 0.4s ease;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Pengambilan Sample Koordinat yang Akurat</h1>
-            <p>Alat untuk mengambil sampel titik latitude dan longitude dengan akurasi tinggi menggunakan GPS, cellular, dan teknik averaging</p>
+        <h1>📍 Pencari Posisi Akurat</h1>
+        <p class="description">Program ini akan mengambil data lokasi Anda dengan akurasi tinggi menggunakan multi-sampling.</p>
+        
+        <div class="status">
+            <p>Status: <span id="statusText">Menunggu untuk memulai...</span></p>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <p>Sample: <span id="progressText">0/5</span></p>
         </div>
-
-        <div class="card">
-            <h2>Peta Interaktif</h2>
-            <div id="map" class="map-container"></div>
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #4CAF50;"></div>
-                    <span>Titik Akurat</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #FFC107;"></div>
-                    <span>Titik Sedang</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color" style="background: #F44336;"></div>
-                    <span>Titik Kurang Akurat</span>
-                </div>
+        
+        <button id="startBtn">Dapatkan Posisi</button>
+        
+        <div class="results">
+            <h2>Hasil Posisi</h2>
+            <div class="result-item">
+                <span>Latitude:</span>
+                <span class="value" id="latitude">-</span>
             </div>
-        </div>
-
-        <div class="card">
-            <h2>Kontrol Pengambilan Sample</h2>
-            <p>Status: <span id="status">Menunggu inisialisasi...</span></p>
-            
-            <div class="progress-bar">
-                <div class="progress" id="progress-bar"></div>
+            <div class="result-item">
+                <span>Longitude:</span>
+                <span class="value" id="longitude">-</span>
             </div>
-            
-            <button id="startBtn" class="btn">Mulai Pengambilan Sample</button>
-            <button id="stopBtn" class="btn btn-danger">Hentikan Pengambilan</button>
-            <button id="resetBtn" class="btn btn-danger">Reset Sample</button>
-            
-            <div class="status">
-                <h3>Sample Terkini</h3>
-                <div class="coordinates">
-                    Latitude: <span id="currentLat">-</span><br>
-                    Longitude: <span id="currentLng">-</span><br>
-                    Akurasi: <span id="currentAcc">-</span> meter
-                    <span id="accuracyBadge" class="accuracy-indicator">-</span>
-                </div>
+            <div class="result-item">
+                <span>Akurasi:</span>
+                <span class="value" id="accuracy">- meter</span>
             </div>
-            
-            <div class="status">
-                <h3>Rata-rata Koordinat</h3>
-                <div class="coordinates">
-                    Latitude: <span id="avgLat">-</span><br>
-                    Longitude: <span id="avgLng">-</span><br>
-                    Jumlah Sample: <span id="sampleCount">0</span>
-                </div>
-                <button id="useAvgBtn" class="btn">Gunakan Rata-rata</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Daftar Sample</h2>
-            <div class="samples-list" id="samplesList"></div>
-        </div>
-
-        <div class="card">
-            <h2>Tips Pengambilan Sample Akurat</h2>
-            <div class="tips">
-                <p>✅ Gunakan di area terbuka dengan langit terbuka untuk penerimaan GPS terbaik</p>
-                <p>✅ Hindari gedung tinggi dan area tertutup</p>
-                <p>✅ Pastikan GPS dan data seluler aktif</p>
-                <p>✅ Ambil banyak sample (minimal 10) dan gunakan nilai rata-rata</p>
-                <p>✅ Diam di tempat selama pengambilan sample</p>
-                <p>✅ Tunggu hingga akurasi mencapai di bawah 10 meter untuk hasil terbaik</p>
-                <p>✅ Hasil lebih akurat dengan perangkat yang mendukung GPS + GLONASS + Galileo</p>
-            </div>
-            
-            <h3>Ekspor Data</h3>
-            <button id="exportBtn" class="btn">Ekspor Koordinat</button>
-            <button id="copyBtn" class="btn">Salin Rata-rata</button>
         </div>
     </div>
 
     <script>
-        // Variabel global
-        let map, markers, watchId;
-        let samples = [];
-        let isSampling = false;
-        
-        // Elemen UI
-        const statusElement = document.getElementById('status');
-        const currentLatElement = document.getElementById('currentLat');
-        const currentLngElement = document.getElementById('currentLng');
-        const currentAccElement = document.getElementById('currentAcc');
-        const accuracyBadgeElement = document.getElementById('accuracyBadge');
-        const avgLatElement = document.getElementById('avgLat');
-        const avgLngElement = document.getElementById('avgLng');
-        const sampleCountElement = document.getElementById('sampleCount');
-        const samplesListElement = document.getElementById('samplesList');
-        const progressBarElement = document.getElementById('progress-bar');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const useAvgBtn = document.getElementById('useAvgBtn');
-        const exportBtn = document.getElementById('exportBtn');
-        const copyBtn = document.getElementById('copyBtn');
-
-        // Inisialisasi peta
-        function initMap() {
-            map = L.map('map').setView([-7.7551217, 112.7516147], 18);
+        document.addEventListener('DOMContentLoaded', function() {
+            const startBtn = document.getElementById('startBtn');
+            const statusText = document.getElementById('statusText');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const latitudeElem = document.getElementById('latitude');
+            const longitudeElem = document.getElementById('longitude');
+            const accuracyElem = document.getElementById('accuracy');
             
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            // Pengaturan
+            const sampleCount = 5;
+            const minAccuracy = 20; // dalam meter
+            const timeout = 30000; // 30 detik
             
-            markers = L.layerGroup().addTo(map);
+            let samples = [];
+            let watchId = null;
+            let currentSample = 0;
             
-            // Tambahkan marker awal
-            L.marker([-7.7551217, 112.7516147])
-                .addTo(map)
-                .bindPopup('Lokasi Contoh')
-                .openPopup();
-        }
-
-        // Inisialisasi aplikasi
-        function initApp() {
-            initMap();
-            setupEventListeners();
-            updateUI();
-        }
-
-        // Setup event listeners
-        function setupEventListeners() {
-            startBtn.addEventListener('click', startSampling);
-            stopBtn.addEventListener('click', stopSampling);
-            resetBtn.addEventListener('click', resetSamples);
-            useAvgBtn.addEventListener('click', useAverageCoordinates);
-            exportBtn.addEventListener('click', exportData);
-            copyBtn.addEventListener('click', copyAverageCoordinates);
-        }
-
-        // Mulai pengambilan sample
-        function startSampling() {
-            if (isSampling) return;
+            startBtn.addEventListener('click', startGeolocation);
             
-            if (!navigator.geolocation) {
-                statusElement.textContent = 'Geolocation tidak didukung oleh browser Anda';
-                return;
+            function startGeolocation() {
+                startBtn.disabled = true;
+                statusText.textContent = "Mencari sinyal GPS...";
+                samples = [];
+                currentSample = 0;
+                updateProgress(0);
+                
+                if (!navigator.geolocation) {
+                    statusText.textContent = "Geolocation tidak didukung browser ini";
+                    startBtn.disabled = false;
+                    return;
+                }
+                
+                // Gunakan watchPosition untuk mendapatkan pembaruan berkelanjutan
+                watchId = navigator.geolocation.watchPosition(
+                    successCallback,
+                    errorCallback,
+                    {
+                        enableHighAccuracy: true,
+                        timeout: timeout,
+                        maximumAge: 0
+                    }
+                );
             }
             
-            isSampling = true;
-            statusElement.textContent = 'Sedang mengambil sample...';
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            
-            // Options untuk geolocation dengan akurasi tinggi
-            const options = {
-                enableHighAccuracy: true,
-                timeout: 5000,
-                maximumAge: 0
-            };
-            
-            watchId = navigator.geolocation.watchPosition(
-                handlePositionUpdate,
-                handlePositionError,
-                options
-            );
-        }
-
-        // Hentikan pengambilan sample
-        function stopSampling() {
-            if (!isSampling) return;
-            
-            isSampling = false;
-            navigator.geolocation.clearWatch(watchId);
-            statusElement.textContent = 'Pengambilan sample dihentikan';
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-        }
-
-        // Reset semua sample
-        function resetSamples() {
-            samples = [];
-            markers.clearLayers();
-            updateUI();
-            statusElement.textContent = 'Sample telah direset';
-        }
-
-        // Handle update posisi
-        function handlePositionUpdate(position) {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-            const accuracy = position.coords.accuracy;
-            const timestamp = position.timestamp;
-            
-            // Tambahkan sample baru
-            const newSample = {
-                latitude,
-                longitude,
-                accuracy,
-                timestamp
-            };
-            
-            samples.push(newSample);
-            
-            // Update UI
-            updateUI();
-            
-            // Tambahkan marker ke peta
-            addSampleToMap(newSample);
-            
-            // Update progress bar
-            updateProgressBar();
-        }
-
-        // Handle error posisi
-        function handlePositionError(error) {
-            let errorMessage;
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = "Pengguna menolak permintaan geolokasi.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = "Informasi lokasi tidak tersedia.";
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = "Permintaan lokasi user timeout.";
-                    break;
-                case error.UNKNOWN_ERROR:
-                    errorMessage = "Error tidak diketahui terjadi.";
-                    break;
+            function successCallback(position) {
+                const accuracy = position.coords.accuracy;
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                
+                samples.push({
+                    accuracy: accuracy,
+                    latitude: latitude,
+                    longitude: longitude,
+                    timestamp: position.timestamp
+                });
+                
+                currentSample++;
+                updateProgress(currentSample);
+                
+                // Jika sudah mendapatkan sample yang cukup atau akurasi yang diinginkan
+                if (currentSample >= sampleCount || accuracy <= minAccuracy) {
+                    // Hentikan pemantauan
+                    navigator.geolocation.clearWatch(watchId);
+                    
+                    // Cari sample dengan akurasi terbaik
+                    const bestSample = samples.reduce((best, current) => {
+                        return (current.accuracy < best.accuracy) ? current : best;
+                    });
+                    
+                    // Tampilkan hasil
+                    latitudeElem.textContent = bestSample.latitude.toFixed(6);
+                    longitudeElem.textContent = bestSample.longitude.toFixed(6);
+                    accuracyElem.textContent = bestSample.accuracy.toFixed(2) + " meter";
+                    
+                    statusText.textContent = "Posisi berhasil ditemukan!";
+                    startBtn.disabled = false;
+                    
+                    // Data siap untuk disalin ke database
+                    console.log("Data posisi terbaik:", bestSample);
+                } else {
+                    statusText.textContent = `Mengambil sample ${currentSample+1}/${sampleCount}...`;
+                }
             }
             
-            statusElement.textContent = `Error: ${errorMessage}`;
-            stopSampling();
-        }
-
-        // Tambahkan sample ke peta
-        function addSampleToMap(sample) {
-            const accuracy = sample.accuracy;
-            
-            // Tentukan warna marker berdasarkan akurasi
-            let markerColor;
-            if (accuracy < 10) markerColor = '#4CAF50';      // Hijau untuk akurasi tinggi
-            else if (accuracy < 30) markerColor = '#FFC107'; // Kuning untuk akurasi sedang
-            else markerColor = '#F44336';                    // Merah untuk akurasi rendah
-            
-            // Buat marker
-            const marker = L.circleMarker([sample.latitude, sample.longitude], {
-                color: markerColor,
-                fillColor: markerColor,
-                fillOpacity: 0.7,
-                radius: 6
-            }).addTo(markers);
-            
-            // Bind popup dengan info akurasi
-            marker.bindPopup(`
-                <b>Sample Point</b><br>
-                Latitude: ${sample.latitude.toFixed(6)}<br>
-                Longitude: ${sample.longitude.toFixed(6)}<br>
-                Akurasi: ${sample.accuracy.toFixed(2)} meter
-            `);
-            
-            // Pusatkan peta ke titik terbaru
-            map.setView([sample.latitude, sample.longitude], 18);
-        }
-
-        // Update UI dengan data terbaru
-        function updateUI() {
-            if (samples.length > 0) {
-                const latestSample = samples[samples.length - 1];
+            function errorCallback(error) {
+                let errorMsg;
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMsg = "Pengguna menolak permintaan geolokasi.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMsg = "Informasi lokasi tidak tersedia.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMsg = "Permintaan lokasi sudah timeout.";
+                        break;
+                    default:
+                        errorMsg = "Error tidak diketahui.";
+                }
                 
-                // Update data sample terkini
-                currentLatElement.textContent = latestSample.latitude.toFixed(6);
-                currentLngElement.textContent = latestSample.longitude.toFixed(6);
-                currentAccElement.textContent = latestSample.accuracy.toFixed(2);
+                statusText.textContent = "Error: " + errorMsg;
+                startBtn.disabled = false;
                 
-                // Update badge akurasi
-                updateAccuracyBadge(latestSample.accuracy);
-                
-                // Hitung dan update rata-rata
-                calculateAndDisplayAverage();
-                
-                // Update daftar sample
-                updateSamplesList();
-            }
-        }
-
-        // Update badge akurasi
-        function updateAccuracyBadge(accuracy) {
-            let accuracyLevel, badgeClass;
-            
-            if (accuracy < 10) {
-                accuracyLevel = "Tinggi";
-                badgeClass = "high";
-            } else if (accuracy < 30) {
-                accuracyLevel = "Sedang";
-                badgeClass = "medium";
-            } else {
-                accuracyLevel = "Rendah";
-                badgeClass = "low";
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
             }
             
-            accuracyBadgeElement.textContent = accuracyLevel;
-            accuracyBadgeElement.className = `accuracy-indicator ${badgeClass}`;
-        }
-
-        // Hitung dan tampilkan rata-rata
-        function calculateAndDisplayAverage() {
-            if (samples.length === 0) return;
-            
-            // Hitung rata-rata
-            let sumLat = 0;
-            let sumLng = 0;
-            
-            samples.forEach(sample => {
-                sumLat += sample.latitude;
-                sumLng += sample.longitude;
-            });
-            
-            const avgLat = sumLat / samples.length;
-            const avgLng = sumLng / samples.length;
-            
-            // Update UI
-            avgLatElement.textContent = avgLat.toFixed(6);
-            avgLngElement.textContent = avgLng.toFixed(6);
-            sampleCountElement.textContent = samples.length;
-        }
-
-        // Update daftar sample
-        function updateSamplesList() {
-            samplesListElement.innerHTML = '';
-            
-            samples.forEach((sample, index) => {
-                const sampleElement = document.createElement('div');
-                sampleElement.className = 'sample-item';
-                
-                // Format tanggal dan waktu
-                const date = new Date(sample.timestamp);
-                const timeString = date.toLocaleTimeString();
-                
-                sampleElement.innerHTML = `
-                    #${index + 1}: ${sample.latitude.toFixed(6)}, ${sample.longitude.toFixed(6)} 
-                    (Akurasi: ${sample.accuracy.toFixed(2)} m - ${timeString})
-                `;
-                
-                samplesListElement.appendChild(sampleElement);
-            });
-            
-            // Scroll ke bawah
-            samplesListElement.scrollTop = samplesListElement.scrollHeight;
-        }
-
-        // Update progress bar
-        function updateProgressBar() {
-            const targetSamples = 20;
-            const progress = Math.min(100, (samples.length / targetSamples) * 100);
-            progressBarElement.style.width = `${progress}%`;
-        }
-
-        // Gunakan koordinat rata-rata
-        function useAverageCoordinates() {
-            if (samples.length === 0) return;
-            
-            // Hitung rata-rata
-            let sumLat = 0;
-            let sumLng = 0;
-            
-            samples.forEach(sample => {
-                sumLat += sample.latitude;
-                sumLng += sample.longitude;
-            });
-            
-            const avgLat = sumLat / samples.length;
-            const avgLng = sumLng / samples.length;
-            
-            // Tampilkan marker khusus untuk rata-rata
-            markers.clearLayers();
-            
-            L.marker([avgLat, avgLng], {
-                icon: L.icon({
-                    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41]
-                })
-            }).addTo(markers)
-            .bindPopup(`
-                <b>Rata-rata Koordinat</b><br>
-                Latitude: ${avgLat.toFixed(6)}<br>
-                Longitude: ${avgLng.toFixed(6)}<br>
-                Jumlah Sample: ${samples.length}
-            `).openPopup();
-            
-            // Pusatkan peta
-            map.setView([avgLat, avgLng], 18);
-            
-            statusElement.textContent = `Menggunakan rata-rata dari ${samples.length} sample`;
-        }
-
-        // Ekspor data
-        function exportData() {
-            if (samples.length === 0) return;
-            
-            let csvContent = "Latitude,Longitude,Akurasi,Timestamp\n";
-            
-            samples.forEach(sample => {
-                csvContent += `${sample.latitude},${sample.longitude},${sample.accuracy},${sample.timestamp}\n`;
-            });
-            
-            const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "koordinat_samples.csv");
-            document.body.appendChild(link);
-            
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // Salin rata-rata ke clipboard
-        function copyAverageCoordinates() {
-            if (samples.length === 0) return;
-            
-            // Hitung rata-rata
-            let sumLat = 0;
-            let sumLng = 0;
-            
-            samples.forEach(sample => {
-                sumLat += sample.latitude;
-                sumLng += sample.longitude;
-            });
-            
-            const avgLat = sumLat / samples.length;
-            const avgLng = sumLng / samples.length;
-            
-            const text = `${avgLat.toFixed(6)}, ${avgLng.toFixed(6)}`;
-            
-            navigator.clipboard.writeText(text).then(() => {
-                statusElement.textContent = "Koordinat rata-rata disalin ke clipboard!";
-            }).catch(err => {
-                statusElement.textContent = "Gagal menyalin ke clipboard: " + err;
-            });
-        }
-
-        // Inisialisasi aplikasi saat halaman dimuat
-        window.onload = initApp;
+            function updateProgress(progress) {
+                const percentage = (progress / sampleCount) * 100;
+                progressBar.style.width = percentage + '%';
+                progressText.textContent = `${progress}/${sampleCount}`;
+            }
+        });
     </script>
 </body>
 </html>
