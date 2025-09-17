@@ -109,12 +109,18 @@
             width: 0%;
             transition: width 0.4s ease;
         }
+        
+        .note {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📍 Pencari Posisi Akurat</h1>
-        <p class="description">Program ini akan mengambil data lokasi Anda dengan akurasi tinggi menggunakan multi-sampling.</p>
+        <p class="description">Program ini akan mengambil 5 sample lokasi dan memilih yang paling akurat.</p>
         
         <div class="status">
             <p>Status: <span id="statusText">Menunggu untuk memulai...</span></p>
@@ -140,7 +146,13 @@
                 <span>Akurasi:</span>
                 <span class="value" id="accuracy">- meter</span>
             </div>
+            <div class="result-item">
+                <span>Sample Terbaik:</span>
+                <span class="value" id="bestSample">-</span>
+            </div>
         </div>
+        
+        <p class="note">Akurasi 5 meter dimungkinkan dengan GPS modern, tetapi tergantung pada perangkat dan kondisi lingkungan.</p>
     </div>
 
     <script>
@@ -152,33 +164,50 @@
             const latitudeElem = document.getElementById('latitude');
             const longitudeElem = document.getElementById('longitude');
             const accuracyElem = document.getElementById('accuracy');
+            const bestSampleElem = document.getElementById('bestSample');
             
             // Pengaturan
             const sampleCount = 5;
-            const minAccuracy = 20; // dalam meter
+            const targetAccuracy = 5; // dalam meter (target yang diinginkan)
             const timeout = 30000; // 30 detik
             
             let samples = [];
-            let watchId = null;
             let currentSample = 0;
+            let isRunning = false;
             
             startBtn.addEventListener('click', startGeolocation);
             
             function startGeolocation() {
+                if (isRunning) return;
+                
                 startBtn.disabled = true;
                 statusText.textContent = "Mencari sinyal GPS...";
                 samples = [];
                 currentSample = 0;
                 updateProgress(0);
+                isRunning = true;
                 
                 if (!navigator.geolocation) {
                     statusText.textContent = "Geolocation tidak didukung browser ini";
                     startBtn.disabled = false;
+                    isRunning = false;
                     return;
                 }
                 
-                // Gunakan watchPosition untuk mendapatkan pembaruan berkelanjutan
-                watchId = navigator.geolocation.watchPosition(
+                // Mulai mengambil sample
+                takeSample();
+            }
+            
+            function takeSample() {
+                if (currentSample >= sampleCount) {
+                    // Semua sample telah diambil
+                    finishSampling();
+                    return;
+                }
+                
+                statusText.textContent = `Mengambil sample ${currentSample+1}/${sampleCount}...`;
+                
+                navigator.geolocation.getCurrentPosition(
                     successCallback,
                     errorCallback,
                     {
@@ -204,29 +233,8 @@
                 currentSample++;
                 updateProgress(currentSample);
                 
-                // Jika sudah mendapatkan sample yang cukup atau akurasi yang diinginkan
-                if (currentSample >= sampleCount || accuracy <= minAccuracy) {
-                    // Hentikan pemantauan
-                    navigator.geolocation.clearWatch(watchId);
-                    
-                    // Cari sample dengan akurasi terbaik
-                    const bestSample = samples.reduce((best, current) => {
-                        return (current.accuracy < best.accuracy) ? current : best;
-                    });
-                    
-                    // Tampilkan hasil
-                    latitudeElem.textContent = bestSample.latitude.toFixed(6);
-                    longitudeElem.textContent = bestSample.longitude.toFixed(6);
-                    accuracyElem.textContent = bestSample.accuracy.toFixed(2) + " meter";
-                    
-                    statusText.textContent = "Posisi berhasil ditemukan!";
-                    startBtn.disabled = false;
-                    
-                    // Data siap untuk disalin ke database
-                    console.log("Data posisi terbaik:", bestSample);
-                } else {
-                    statusText.textContent = `Mengambil sample ${currentSample+1}/${sampleCount}...`;
-                }
+                // Lanjut ke sample berikutnya
+                setTimeout(takeSample, 1000);
             }
             
             function errorCallback(error) {
@@ -247,10 +255,44 @@
                 
                 statusText.textContent = "Error: " + errorMsg;
                 startBtn.disabled = false;
-                
-                if (watchId) {
-                    navigator.geolocation.clearWatch(watchId);
+                isRunning = false;
+            }
+            
+            function finishSampling() {
+                if (samples.length === 0) {
+                    statusText.textContent = "Tidak ada sample yang berhasil diambil";
+                    startBtn.disabled = false;
+                    isRunning = false;
+                    return;
                 }
+                
+                // Cari sample dengan akurasi terbaik
+                const bestSample = samples.reduce((best, current) => {
+                    return (current.accuracy < best.accuracy) ? current : best;
+                });
+                
+                // Tampilkan hasil
+                latitudeElem.textContent = bestSample.latitude.toFixed(6);
+                longitudeElem.textContent = bestSample.longitude.toFixed(6);
+                accuracyElem.textContent = bestSample.accuracy.toFixed(2) + " meter";
+                
+                // Tentukan sample terbaik
+                const bestIndex = samples.findIndex(s => s.accuracy === bestSample.accuracy) + 1;
+                bestSampleElem.textContent = `Sample ${bestIndex}`;
+                
+                statusText.textContent = "Posisi berhasil ditemukan!";
+                startBtn.disabled = false;
+                isRunning = false;
+                
+                // Tampilkan pesan tentang akurasi
+                if (bestSample.accuracy <= targetAccuracy) {
+                    statusText.textContent += " Akurasi ≤5 meter tercapai!";
+                } else {
+                    statusText.textContent += ` Akurasi terbaik: ${bestSample.accuracy.toFixed(2)} meter.`;
+                }
+                
+                // Data siap untuk disalin ke database
+                console.log("Data posisi terbaik:", bestSample);
             }
             
             function updateProgress(progress) {
