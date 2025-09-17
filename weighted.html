@@ -166,7 +166,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>📍 Lokasari</h1>
+        <h1>?? Lokasari</h1>
         <!--p class="description">Mencari lokasi esensial</p-->
         
         <div class="settings">
@@ -223,10 +223,10 @@
                 </div>
             </div>
             
-            <div class="result-item">
+            <!--div class="result-item">
                 <span>Sample Digunakan:</span>
                 <span class="value" id="samplesUsed">-</span>
-            </div>
+            </div-->
         </div>
         
         <!--p class="note">Hasil weighted average memberikan bobot lebih pada sample dengan akurasi lebih tinggi.</p-->
@@ -244,7 +244,7 @@
             const weightedLatitudeElem = document.getElementById('weightedLatitude');
             const weightedLongitudeElem = document.getElementById('weightedLongitude');
             const weightedAccuracyElem = document.getElementById('weightedAccuracy');
-            const samplesUsedElem = document.getElementById('samplesUsed');
+            //const samplesUsedElem = document.getElementById('samplesUsed');
             
             let samples = [];
             let currentSample = 0;
@@ -329,7 +329,7 @@
                     startBtn.disabled = false;
                     isRunning = false;
                     
-                    samplesUsedElem.textContent = `${samples.length} sample`;
+                    //samplesUsedElem.textContent = `${samples.length} sample`;
                 }
             }
             
