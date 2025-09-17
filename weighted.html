@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencari Posisi dengan Median & Weighted Average</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 600px;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        h1 {
+            margin-bottom: 15px;
+            font-size: 24px;
+        }
+        
+        .description {
+            margin-bottom: 25px;
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+        
+        .settings {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        label {
+            font-weight: 600;
+        }
+        
+        input {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            width: 80px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .status {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .results {
+            background-color: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .result-section {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .result-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+        }
+        
+        .value {
+            font-weight: 600;
+            color: #a8e6cf;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+            width: 100%;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #0083b0 0%, #00b4db 100%);
+            transform: translateY(-2px);
+        }
+        
+        .progress {
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        
+        .note {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 15px;
+        }
+        
+        .sample-info {
+            font-size: 14px;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+        
+        .method-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #a8e6cf;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📍 Pencari Posisi dengan Median & Weighted Average</h1>
+        <p class="description">Program ini menggunakan median dan weighted average berdasarkan akurasi untuk hasil terbaik.</p>
+        
+        <div class="settings">
+            <div class="setting-item">
+                <label for="sampleCount">Jumlah Sample:</label>
+                <input type="number" id="sampleCount" min="5" max="20" value="10">
+            </div>
+            <div class="setting-item">
+                <label for="minAccuracy">Akurasi Maks (m):</label>
+                <input type="number" id="minAccuracy" min="5" max="100" value="20">
+            </div>
+        </div>
+        
+        <div class="status">
+            <p>Status: <span id="statusText">Menunggu untuk memulai...</span></p>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <p>Sample: <span id="progressText">0/10</span></p>
+        </div>
+        
+        <button id="startBtn">Dapatkan Posisi</button>
+        
+        <div class="results">
+            <div class="result-section">
+                <div class="method-title">Hasil Berdasarkan Median</div>
+                <div class="result-item">
+                    <span>Latitude:</span>
+                    <span class="value" id="medianLatitude">-</span>
+                </div>
+                <div class="result-item">
+                    <span>Longitude:</span>
+                    <span class="value" id="medianLongitude">-</span>
+                </div>
+                <div class="result-item">
+                    <span>Akurasi Median:</span>
+                    <span class="value" id="medianAccuracy">- meter</span>
+                </div>
+            </div>
+            
+            <div class="result-section">
+                <div class="method-title">Hasil Berdasarkan Weighted Average</div>
+                <div class="result-item">
+                    <span>Latitude:</span>
+                    <span class="value" id="weightedLatitude">-</span>
+                </div>
+                <div class="result-item">
+                    <span>Longitude:</span>
+                    <span class="value" id="weightedLongitude">-</span>
+                </div>
+                <div class="result-item">
+                    <span>Akurasi Rata-rata:</span>
+                    <span class="value" id="weightedAccuracy">- meter</span>
+                </div>
+            </div>
+            
+            <div class="result-item">
+                <span>Sample Digunakan:</span>
+                <span class="value" id="samplesUsed">-</span>
+            </div>
+        </div>
+        
+        <p class="note">Hasil weighted average memberikan bobot lebih pada sample dengan akurasi lebih tinggi.</p>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startBtn = document.getElementById('startBtn');
+            const statusText = document.getElementById('statusText');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const medianLatitudeElem = document.getElementById('medianLatitude');
+            const medianLongitudeElem = document.getElementById('medianLongitude');
+            const medianAccuracyElem = document.getElementById('medianAccuracy');
+            const weightedLatitudeElem = document.getElementById('weightedLatitude');
+            const weightedLongitudeElem = document.getElementById('weightedLongitude');
+            const weightedAccuracyElem = document.getElementById('weightedAccuracy');
+            const samplesUsedElem = document.getElementById('samplesUsed');
+            
+            let samples = [];
+            let currentSample = 0;
+            let isRunning = false;
+            let watchId = null;
+            
+            startBtn.addEventListener('click', startGeolocation);
+            
+            function startGeolocation() {
+                if (isRunning) return;
+                
+                const sampleCount = parseInt(document.getElementById('sampleCount').value);
+                const minAccuracy = parseInt(document.getElementById('minAccuracy').value);
+                
+                startBtn.disabled = true;
+                statusText.textContent = "Mencari sinyal GPS...";
+                samples = [];
+                currentSample = 0;
+                updateProgress(0, sampleCount);
+                isRunning = true;
+                
+                if (!navigator.geolocation) {
+                    statusText.textContent = "Geolocation tidak didukung browser ini";
+                    startBtn.disabled = false;
+                    isRunning = false;
+                    return;
+                }
+                
+                // Gunakan watchPosition untuk mendapatkan pembaruan berkelanjutan
+                watchId = navigator.geolocation.watchPosition(
+                    position => successCallback(position, sampleCount, minAccuracy),
+                    errorCallback,
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 30000,
+                        maximumAge: 0
+                    }
+                );
+            }
+            
+            function successCallback(position, sampleCount, minAccuracy) {
+                const accuracy = position.coords.accuracy;
+                const latitude = position.coords.latitude;
+                const longitude = position.coords.longitude;
+                
+                // Hanya simpan sample jika memenuhi kriteria akurasi
+                if (accuracy <= minAccuracy) {
+                    samples.push({
+                        accuracy: accuracy,
+                        latitude: latitude,
+                        longitude: longitude,
+                        timestamp: position.timestamp
+                    });
+                    
+                    currentSample++;
+                    updateProgress(currentSample, sampleCount);
+                    
+                    statusText.textContent = `Mengambil sample ${currentSample}/${sampleCount} (Akurasi: ${accuracy.toFixed(2)} m)`;
+                } else {
+                    statusText.textContent = `Mengabaikan sample (Akurasi: ${accuracy.toFixed(2)} m > ${minAccuracy} m)`;
+                }
+                
+                // Jika sudah mendapatkan sample yang cukup
+                if (currentSample >= sampleCount) {
+                    // Hentikan pemantauan
+                    navigator.geolocation.clearWatch(watchId);
+                    
+                    if (samples.length === 0) {
+                        statusText.textContent = "Tidak ada sample yang memenuhi kriteria akurasi";
+                        startBtn.disabled = false;
+                        isRunning = false;
+                        return;
+                    }
+                    
+                    // Hitung hasil berdasarkan median
+                    calculateMedianResults();
+                    
+                    // Hitung hasil berdasarkan weighted average
+                    calculateWeightedAverageResults();
+                    
+                    statusText.textContent = "Posisi berhasil ditemukan!";
+                    startBtn.disabled = false;
+                    isRunning = false;
+                    
+                    samplesUsedElem.textContent = `${samples.length} sample`;
+                }
+            }
+            
+            function calculateMedianResults() {
+                // Urutkan sample berdasarkan latitude
+                const sortedByLat = [...samples].sort((a, b) => a.latitude - b.latitude);
+                // Urutkan sample berdasarkan longitude
+                const sortedByLng = [...samples].sort((a, b) => a.longitude - b.longitude);
+                // Urutkan sample berdasarkan akurasi
+                const sortedByAcc = [...samples].sort((a, b) => a.accuracy - b.accuracy);
+                
+                // Ambil nilai median
+                const mid = Math.floor(samples.length / 2);
+                
+                const medianLatitude = samples.length % 2 !== 0 
+                    ? sortedByLat[mid].latitude 
+                    : (sortedByLat[mid - 1].latitude + sortedByLat[mid].latitude) / 2;
+                
+                const medianLongitude = samples.length % 2 !== 0 
+                    ? sortedByLng[mid].longitude 
+                    : (sortedByLng[mid - 1].longitude + sortedByLng[mid].longitude) / 2;
+                
+                const medianAccuracy = samples.length % 2 !== 0 
+                    ? sortedByAcc[mid].accuracy 
+                    : (sortedByAcc[mid - 1].accuracy + sortedByAcc[mid].accuracy) / 2;
+                
+                // Tampilkan hasil median
+                medianLatitudeElem.textContent = medianLatitude.toFixed(6);
+                medianLongitudeElem.textContent = medianLongitude.toFixed(6);
+                medianAccuracyElem.textContent = medianAccuracy.toFixed(2) + " meter";
+            }
+            
+            function calculateWeightedAverageResults() {
+                // Hitung weighted average berdasarkan akurasi
+                // Bobot = 1/akurasi, sehingga sample dengan akurasi lebih tinggi memiliki bobot lebih besar
+                let totalWeight = 0;
+                let weightedLatSum = 0;
+                let weightedLngSum = 0;
+                let accuracySum = 0;
+                
+                for (const sample of samples) {
+                    const weight = 1 / sample.accuracy;
+                    totalWeight += weight;
+                    weightedLatSum += sample.latitude * weight;
+                    weightedLngSum += sample.longitude * weight;
+                    accuracySum += sample.accuracy;
+                }
+                
+                const weightedLatitude = weightedLatSum / totalWeight;
+                const weightedLongitude = weightedLngSum / totalWeight;
+                const averageAccuracy = accuracySum / samples.length;
+                
+                // Tampilkan hasil weighted average
+                weightedLatitudeElem.textContent = weightedLatitude.toFixed(6);
+                weightedLongitudeElem.textContent = weightedLongitude.toFixed(6);
+                weightedAccuracyElem.textContent = averageAccuracy.toFixed(2) + " meter";
+            }
+            
+            function errorCallback(error) {
+                let errorMsg;
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMsg = "Pengguna menolak permintaan geolokasi.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMsg = "Informasi lokasi tidak tersedia.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMsg = "Permintaan lokasi sudah timeout.";
+                        break;
+                    default:
+                        errorMsg = "Error tidak diketahui.";
+                }
+                
+                statusText.textContent = "Error: " + errorMsg;
+                startBtn.disabled = false;
+                isRunning = false;
+                
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
+            }
+            
+            function updateProgress(progress, total) {
+                const percentage = (progress / total) * 100;
+                progressBar.style.width = percentage + '%';
+                progressText.textContent = `${progress}/${total}`;
+            }
+        });
+    </script>
+</body>
+</html>
