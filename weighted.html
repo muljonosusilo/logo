@@ -181,7 +181,7 @@
         </div>
         
         <div class="status">
-            <p>Status: <span id="statusText">Menunggu untuk memulai\nscan</span></p>
+            <p>Status: <span id="statusText">Menunggu untuk memulai scan</span></p>
             <div class="progress">
                 <div class="progress-bar" id="progressBar"></div>
             </div>
@@ -260,7 +260,7 @@
                 const minAccuracy = parseInt(document.getElementById('minAccuracy').value);
                 
                 startBtn.disabled = true;
-                statusText.textContent = "Mencari sinyal GPS\n...";
+                statusText.textContent = "Mencari sinyal GPS + Cellular ...";
                 samples = [];
                 currentSample = 0;
                 updateProgress(0, sampleCount);
