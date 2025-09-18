@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Logo Location</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .info-panel h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+        
+        .location-info {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .distance {
+            color: #FFC107;
+            font-weight: bold;
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body style="margin: 0px; overflow: hidden;">
+    <div class="loading" id="loading">Memuat AR...</div>
+    
+    <div class="info-panel">
+        <h3>AR Logo Location</h3>
+        <div class="location-info">
+            <strong>Lokasi Anda:</strong>
+            <div id="user-location">Mendeteksi posisi...</div>
+        </div>
+        <div class="location-info">
+            <strong>Titik Terdekat:</strong>
+            <div id="nearest-point">-</div>
+        </div>
+        <div class="location-info">
+            <strong>Jarak:</strong>
+            <div id="distance" class="distance">-</div>
+        </div>
+    </div>
+
+    <a-scene 
+        vr-mode-ui="enabled: false" 
+        arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        renderer="logarithmicDepthBuffer: true;"
+        embedded>
+        
+        <a-assets>
+            <img id="logo" src="logo.png" crossorigin="anonymous">
+        </a-assets>
+        
+        <!-- Kamera dengan GPS -->
+        <a-entity gps-camera="minDistance: 1; maxDistance: 1000;"></a-entity>
+        
+        <!-- Titik 1 -->
+        <a-entity 
+            id="point1"
+            gps-entity-place="latitude: -6.200000; longitude: 106.816666;"
+            scale="0.1 0.1 0.1"
+            rotation="0 0 0">
+            <a-image 
+                src="#logo" 
+                width="2" 
+                height="2"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 5000"
+                transparent="true">
+            </a-image>
+        </a-entity>
+        
+        <!-- Titik 2 -->
+        <a-entity 
+            id="point2"
+            gps-entity-place="latitude: -6.201000; longitude: 106.817666;"
+            scale="0.1 0.1 0.1"
+            rotation="0 0 0">
+            <a-image 
+                src="#logo" 
+                width="2" 
+                height="2"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 5000"
+                transparent="true">
+            </a-image>
+        </a-entity>
+        
+        <!-- Titik 3 -->
+        <a-entity 
+            id="point3"
+            gps-entity-place="latitude: -6.202000; longitude: 106.818666;"
+            scale="0.1 0.1 0.1"
+            rotation="0 0 0">
+            <a-image 
+                src="#logo" 
+                width="2" 
+                height="2"
+                animation="property: rotation; to: 0 360 0; loop: true; dur: 5000"
+                transparent="true">
+            </a-image>
+        </a-entity>
+        
+    </a-scene>
+
+    <script>
+        // Data lokasi titik-titik
+        const locations = [
+            { id: 'point1', name: 'Titik 1', lat: -6.200000, lng: 106.816666 },
+            { id: 'point2', name: 'Titik 2', lat: -6.201000, lng: 106.817666 },
+            { id: 'point3', name: 'Titik 3', lat: -6.202000, lng: 106.818666 }
+        ];
+        
+        let userPosition = null;
+        let nearestPoint = null;
+        
+        // Fungsi untuk menghitung jarak antara dua koordinat (dalam meter)
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius bumi dalam km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c * 1000; // Konversi ke meter
+            return distance;
+        }
+        
+        // Fungsi untuk memperbarui skala logo berdasarkan jarak
+        function updateLogoScale() {
+            if (!userPosition) return;
+            
+            let minDistance = Infinity;
+            let closestPoint = null;
+            
+            locations.forEach(location => {
+                const distance = calculateDistance(
+                    userPosition.latitude, userPosition.longitude,
+                    location.lat, location.lng
+                );
+                
+                // Update skala berdasarkan jarak
+                const entity = document.getElementById(location.id);
+                if (entity) {
+                    // Semakin dekat, semakin besar (max 1.0, min 0.1)
+                    const scale = Math.max(0.1, Math.min(1.0, 100 / distance));
+                    entity.setAttribute('scale', `${scale} ${scale} ${scale}`);
+                }
+                
+                // Cari titik terdekat
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestPoint = location;
+                }
+            });
+            
+            // Update informasi panel
+            if (closestPoint) {
+                document.getElementById('nearest-point').textContent = closestPoint.name;
+                document.getElementById('distance').textContent = `${minDistance.toFixed(2)} meter`;
+            }
+        }
+        
+        // Mendapatkan posisi pengguna
+        function getUserPosition() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(
+                    (position) => {
+                        userPosition = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                        };
+                        
+                        // Update lokasi user di panel
+                        document.getElementById('user-location').innerHTML = 
+                            `Lat: ${userPosition.latitude.toFixed(6)}<br>Lng: ${userPosition.longitude.toFixed(6)}`;
+                        
+                        // Update skala logo
+                        updateLogoScale();
+                        
+                        // Sembunyikan loading
+                        document.getElementById('loading').style.display = 'none';
+                    },
+                    (error) => {
+                        console.error('Error getting location:', error);
+                        document.getElementById('user-location').textContent = 'Gagal mendeteksi lokasi';
+                        document.getElementById('loading').style.display = 'none';
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 0,
+                        timeout: 10000
+                    }
+                );
+            } else {
+                document.getElementById('user-location').textContent = 'Browser tidak mendukung GPS';
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        // Simulasi pergerakan untuk testing (opsional)
+        function simulateMovement() {
+            let simLat = -6.199000;
+            let simLng = 106.815666;
+            
+            setInterval(() => {
+                // Bergerak perlahan menuju titik 1
+                simLat += 0.0001;
+                simLng += 0.0001;
+                
+                userPosition = {
+                    latitude: simLat,
+                    longitude: simLng
+                };
+                
+                document.getElementById('user-location').innerHTML = 
+                    `Lat: ${simLat.toFixed(6)}<br>Lng: ${simLng.toFixed(6)} (Simulasi)`;
+                
+                updateLogoScale();
+            }, 1000);
+        }
+        
+        // Inisialisasi
+        window.addEventListener('load', () => {
+            // Uncomment baris berikut untuk menggunakan simulasi
+            // simulateMovement();
+            
+            // Gunakan GPS asli
+            getUserPosition();
+            
+            // Update skala setiap 100ms untuk smooth transition
+            setInterval(updateLogoScale, 100);
+        });
+        
+        // Handle error jika gambar tidak bisa dimuat
+        document.querySelector('a-image').addEventListener('materialtextureloaded', () => {
+            console.log('Logo loaded successfully');
+        });
+        
+        document.querySelector('a-image').addEventListener('materialtextureerror', () => {
+            console.error('Failed to load logo image');
+            // Ganti dengan placeholder jika logo tidak ditemukan
+            const placeholder = document.createElement('a-box');
+            placeholder.setAttribute('color', '#4CAF50');
+            placeholder.setAttribute('width', '2');
+            placeholder.setAttribute('height', '2');
+            placeholder.setAttribute('depth', '0.1');
+            document.querySelector('a-image').parentNode.appendChild(placeholder);
+        });
+    </script>
+</body>
+</html>
